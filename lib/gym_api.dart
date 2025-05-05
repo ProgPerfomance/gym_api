@@ -24,7 +24,7 @@ void start () async {
 
   });
 
-  final server = await serve(router, 'localhost', 3930);
+  final server = await serve(router, '0.0.0.0', 3930);
   print(server.address);
 
 }
