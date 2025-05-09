@@ -27,6 +27,26 @@ Future<void> start() async {
     );
   });
 
+  router.post('/start/<id>', (Request request, String id) async {
+    final queue = db.collection('tournaments');
+    final active = db.collection('activeTournament');
+
+    final tournament = await queue.findOne(where.id(ObjectId.parse(id)));
+    if (tournament == null) {
+      return Response.notFound('Турнир не найден');
+    }
+
+    // Удаляем старый активный турнир и сохраняем новый
+    await active.deleteMany({});
+    tournament.remove('_id'); // удаляем старый ID
+    await active.insertOne(tournament);
+
+    return Response.ok(jsonEncode({'status': 'started'}), headers: {
+      'Content-Type': 'application/json',
+    });
+  });
+
+
   router.get('/tournaments', (Request request) async {
     final queue = db.collection('tournaments');
     final tournaments = await queue.find().toList();
