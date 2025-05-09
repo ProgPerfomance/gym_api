@@ -4,7 +4,7 @@ MongoService mongoService = MongoService();
 class MongoService {
   Db? db;
   initMongo() async {
-    db = Db("mongodb://localhost:27017/profi");
+    db = Db("mongodb://localhost:27017/gym");
     await db?.open();
   }
   get mongoDb => db!;
