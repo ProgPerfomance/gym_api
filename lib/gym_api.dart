@@ -35,14 +35,6 @@ Future<void> start() async {
   final collection = db.collection('activeTournament');
   final router = Router();
 
-  // === POST /tournament/create ===
-  router.post('/tournament/create', (Request request) async {
-    final data = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
-    print('[CREATE] Получен турнир: $data');
-    return Response.ok('Tournament received');
-  });
-
-  // === GET /pull ===
   router.get('/pull', (Request request) async {
     final doc = await collection.findOne();
     if (doc == null) {
@@ -125,6 +117,21 @@ Future<void> start() async {
     return Response.ok('Оценка добавлена');
   });
 
+  router.post('/tournament', (Request request) async {
+    final body = await request.readAsString();
+    final data = jsonDecode(body);
+
+    if (data['title'] == null || data['sets'] == null || data['sets'] is! List) {
+      return Response.badRequest(body: 'Неверный формат данных турнира');
+    }
+
+    await collection.deleteMany({}); // сброс текущего активного турнира
+    await collection.insert(data);   // сохраняем как есть, без модификаций
+
+    return Response.ok(jsonEncode({'status': 'ok'}), headers: {
+      'Content-Type': 'application/json',
+    });
+  });
 
 
 
@@ -170,7 +177,6 @@ Future<void> start() async {
         setIndex++;
 
         if (setIndex >= sets.length) {
-          // Турнир завершён
           final result = await collection.update(
             where.id(data['_id'] as ObjectId),
             modify.set('completed', true),
@@ -179,8 +185,6 @@ Future<void> start() async {
         }
       }
     }
-
-    // Обновляем индексы
     final result = await collection.update(
       where.id(data['_id'] as ObjectId),
       modify
