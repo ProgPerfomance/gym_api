@@ -1,33 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_router/shelf_router.dart';
-
 import 'package:gym_api/services/mongo_service.dart';
+import 'middleware/cors_middleware.dart';
 
-/// Middleware: CORS
-Middleware corsMiddleware = (Handler handler) {
-  return (Request request) async {
-    if (request.method == 'OPTIONS') {
-      return Response.ok('', headers: _corsHeaders);
-    }
 
-    final response = await handler(request);
-    return response.change(headers: {
-      ...response.headers,
-      ..._corsHeaders,
-    });
-  };
-};
-
-const _corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': '*',
-};
 
 Future<void> start() async {
   await mongoService.initMongo();
@@ -43,6 +23,16 @@ Future<void> start() async {
 
     return Response.ok(
       jsonEncode(doc),
+      headers: {'Content-Type': 'application/json'},
+    );
+  });
+
+  router.get('/tournaments', (Request request) async {
+    final queue = db.collection('tournaments');
+    final tournaments = await queue.find().toList();
+
+    return Response.ok(
+      jsonEncode(tournaments),
       headers: {'Content-Type': 'application/json'},
     );
   });
