@@ -117,6 +117,7 @@ Future<void> start() async {
     return Response.ok('Оценка добавлена');
   });
 
+
   router.post('/tournament', (Request request) async {
     final body = await request.readAsString();
     final data = jsonDecode(body);
@@ -125,14 +126,16 @@ Future<void> start() async {
       return Response.badRequest(body: 'Неверный формат данных турнира');
     }
 
-    await collection.deleteMany({}); // сброс текущего активного турнира
-    await collection.insert(data);   // сохраняем как есть, без модификаций
+    final queue = db.collection('tournaments');
+    await queue.insertOne({
+      ...data,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
 
     return Response.ok(jsonEncode({'status': 'ok'}), headers: {
       'Content-Type': 'application/json',
     });
   });
-
 
 
   // === POST /next ===
