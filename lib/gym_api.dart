@@ -159,9 +159,10 @@ Future<void> start() async {
   });
 
 
-  // === POST /next ===
+
   router.post('/next', (Request request) async {
     final collection = db.collection('activeTournament');
+    final archive = db.collection('archivedTournaments');
 
     final data = await collection.findOne();
     if (data == null) {
@@ -201,15 +202,28 @@ Future<void> start() async {
         setIndex++;
 
         if (setIndex >= sets.length) {
-          final result = await collection.update(
+          // Завершить турнир и переместить в архив
+          await collection.update(
             where.id(data['_id'] as ObjectId),
             modify.set('completed', true),
           );
-          return Response.ok('Турнир завершён');
+
+          final completedDoc = await collection.findOne();
+          if (completedDoc != null) {
+            completedDoc.remove('_id');
+            completedDoc['archivedAt'] = DateTime.now().toIso8601String();
+            await archive.insertOne(completedDoc);
+          }
+
+          await collection.deleteMany({}); // очистить активный
+
+          return Response.ok('Турнир завершён и заархивирован');
         }
       }
     }
-    final result = await collection.update(
+
+    // Обновление текущих индексов
+    await collection.update(
       where.id(data['_id'] as ObjectId),
       modify
         ..set('activeSet', setIndex)
@@ -217,9 +231,28 @@ Future<void> start() async {
         ..set('sets.$setIndex.items.$itemIndex.activeChild', childIndex),
     );
 
-      return Response.ok('OK: set=$setIndex item=$itemIndex child=$childIndex');
-
+    return Response.ok('OK: set=$setIndex item=$itemIndex child=$childIndex');
   });
+
+
+  router.get('/export', (Request request) async {
+    final archive = db.collection('archivedTournaments');
+
+    final latest = await archive
+        .find(where.sortBy('archivedAt', descending: true).limit(1))
+        .toList();
+
+    if (latest.isEmpty) {
+      return Response.notFound('Нет завершённых турниров');
+    }
+
+    return Response.ok(
+      jsonEncode(latest.first),
+      headers: {'Content-Type': 'application/json'},
+    );
+  });
+
+
 
   final certPath = '/etc/letsencrypt/live/mvpgarage.one/fullchain.pem';
   final keyPath = '/etc/letsencrypt/live/mvpgarage.one/privkey.pem';
