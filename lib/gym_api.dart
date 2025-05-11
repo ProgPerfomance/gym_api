@@ -90,55 +90,11 @@ Future<void> start() async {
     final body = await request.readAsString();
     final data = jsonDecode(body);
 
-    final double? rate = (data['rate'] as num?)?.toDouble();
+    final double? rawRate = (data['rate'] as num?)?.toDouble();
     final String? masterId = data['master_id']?.toString();
 
-    if (rate == null || masterId == null || rate < 0 || rate > 10) {
-      return Response.badRequest(body: 'Неверный формат данных');
-    }
-
-    final doc = await collection.findOne();
-    if (doc == null || doc['completed'] == true) {
-      return Response.notFound('Турнир не найден или завершён');
-    }
-
-    final ObjectId id = doc['_id'] is ObjectId
-        ? doc['_id']
-        : ObjectId.fromHexString(doc['_id'].toString());
-
-    final setIndex = doc['activeSet'] ?? 0;
-    final set = doc['sets'][setIndex];
-    final itemIndex = set['activeItem'] ?? 0;
-    final item = set['items'][itemIndex];
-    final childIndex = item['activeChild'] ?? 0;
-
-    final ratings = item['childrens'][childIndex]['ratings'] as List<dynamic>? ?? [];
-
-    final alreadyRated = ratings.any((r) => r['master_id'] == masterId);
-    if (alreadyRated) {
-      return Response.forbidden('Оценка от этого судьи уже существует');
-    }
-
-    final ratingEntry = {
-      'master_id': masterId,
-      'rate': rate,
-    };
-
-    final path = 'sets.$setIndex.items.$itemIndex.childrens.$childIndex.ratings';
-
-    await collection.update(
-      where.id(id),
-      modify.push(path, ratingEntry),
-    );
-
-    return Response.ok('Оценка добавлена');
-  });
-  router.post('/rate', (Request request) async {
-    final body = await request.readAsString();
-    final data = jsonDecode(body);
-
-    final double? rate = (data['rate'] as num?)?.toDouble();
-    final String? masterId = data['master_id']?.toString();
+    // Округление rate до 2 знаков
+    final double? rate = rawRate != null ? double.parse(rawRate.toStringAsFixed(2)) : null;
 
     if (rate == null || masterId == null || rate < 0 || rate > 10) {
       return Response.badRequest(body: 'Неверный формат данных');
