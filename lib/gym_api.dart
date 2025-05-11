@@ -85,6 +85,24 @@ Future<void> start() async {
     });
   });
 
+  router.get('/archives', (Request request) async {
+    final archive = db.collection('archivedTournaments');
+
+    final results = await archive
+        .find(where.sortBy('archivedAt', descending: true))
+        .map((doc) {
+      doc.remove('_id');
+      return doc;
+    })
+        .toList();
+
+    return Response.ok(
+      jsonEncode(results),
+      headers: {'Content-Type': 'application/json'},
+    );
+  });
+
+
 
   router.post('/rate', (Request request) async {
     final body = await request.readAsString();
