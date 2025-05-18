@@ -196,11 +196,11 @@ Future<void> start() async {
       .addMiddleware(corsMiddleware)
       .addHandler(router);
 
-  // final securityContext = SecurityContext()
-  //   ..useCertificateChain(certPath)
-  //   ..usePrivateKey(keyPath);
+  final securityContext = SecurityContext()
+    ..useCertificateChain(certPath)
+    ..usePrivateKey(keyPath);
 
   await serve(handler, '0.0.0.0', 3890,
-      //securityContext: securityContext
+      securityContext: securityContext
   );
 }
