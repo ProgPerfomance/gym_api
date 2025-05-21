@@ -160,6 +160,7 @@ Future<void> start() async {
       if (data['title'] != null) modifier.set('title', data['title']);
       if (data['startTime'] != null) modifier.set('startTime', data['startTime']);
       if (data['status'] != null) modifier.set('status', data['status']);
+      if (data['sets'] != null && data['sets'] is List) modifier.set('sets', data['sets']);
 
       if (modifier.map.isEmpty) {
         return Response.badRequest(body: 'Нет данных для обновления');
@@ -179,6 +180,7 @@ Future<void> start() async {
       return Response.badRequest(body: jsonEncode({'error': 'Некорректный ID или тело запроса'}));
     }
   });
+
 
 
   router.post('/next', (Request request) async {
