@@ -131,6 +131,41 @@ Future<void> start() async {
     });
   });
 
+  router.put('/rate', (Request request) async {
+    try {
+      final body = await request.readAsString();
+      final data = jsonDecode(body);
+
+      final ObjectId id = ObjectId.parse(data['tournamentId']);
+      final int setIndex = data['setIndex'];
+      final int itemIndex = data['itemIndex'];
+      final int childIndex = data['childIndex'];
+      final String masterId = data['master_id'];
+      final double rate = (data['rate'] as num).toDouble();
+
+      final ratingsPath = 'sets.$setIndex.items.$itemIndex.childrens.$childIndex.ratings';
+
+      final doc = await tournaments.findOne(where.id(id));
+      if (doc == null) return Response.notFound('Турнир не найден');
+
+      final ratings = (((doc['sets'] as List)[setIndex]['items'] as List)[itemIndex]['childrens'] as List)[childIndex]['ratings'] ?? [];
+
+      final updatedRatings = (ratings as List)
+          .map((r) => r['master_id'] == masterId ? {'master_id': masterId, 'rate': rate} : r)
+          .toList();
+
+      await tournaments.update(
+        where.id(id),
+        modify.set(ratingsPath, updatedRatings),
+      );
+
+      return Response.ok(jsonEncode({'status': 'updated'}));
+    } catch (e) {
+      return Response.badRequest(body: jsonEncode({'error': e.toString()}));
+    }
+  });
+
+
   router.get('/tournament/<id>', (Request request, String id) async {
     try {
       final ObjectId tid = ObjectId.parse(id);
