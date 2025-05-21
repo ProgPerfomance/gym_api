@@ -149,6 +149,38 @@ Future<void> start() async {
   });
 
 
+  router.put('/tournament/<id>', (Request request, String id) async {
+    try {
+      final ObjectId tid = ObjectId.parse(id);
+      final body = await request.readAsString();
+      final data = jsonDecode(body);
+
+      final modifier = modify;
+
+      if (data['title'] != null) modifier.set('title', data['title']);
+      if (data['startTime'] != null) modifier.set('startTime', data['startTime']);
+      if (data['status'] != null) modifier.set('status', data['status']);
+
+      if (modifier.map.isEmpty) {
+        return Response.badRequest(body: 'Нет данных для обновления');
+      }
+
+      final result = await tournaments.updateOne(
+        where.id(tid),
+        modifier,
+      );
+
+      if (result.isSuccess) {
+        return Response.ok(jsonEncode({'status': 'updated'}));
+      } else {
+        return Response.internalServerError(body: 'Ошибка обновления');
+      }
+    } catch (e) {
+      return Response.badRequest(body: jsonEncode({'error': 'Некорректный ID или тело запроса'}));
+    }
+  });
+
+
   router.post('/next', (Request request) async {
     final activeDoc = await active.findOne();
     if (activeDoc == null) return Response.internalServerError(body: 'Нет активного турнира');
